@@ -255,3 +255,9 @@ create policy admin_update_settings on public.settings for update to authenticat
 -- Revocar acceso a anon (no se usa)
 revoke all on public.app_secrets from anon, authenticated;
 revoke execute on function public.handle_new_auth_user() from anon, authenticated, public;
+
+-- Las funciones de rol solo para usuarios con sesión
+revoke execute on function public.is_staff() from public, anon;
+revoke execute on function public.is_admin() from public, anon;
+grant execute on function public.is_staff() to authenticated;
+grant execute on function public.is_admin() to authenticated;
