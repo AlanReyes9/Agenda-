@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-brand-50: oklch(0.98 0.02 70);
+  --color-brand-100: oklch(0.95 0.05 70);
+  --color-brand-200: oklch(0.9 0.09 68);
+  --color-brand-300: oklch(0.84 0.13 65);
+  --color-brand-400: oklch(0.78 0.16 60);
+  --color-brand-500: oklch(0.72 0.17 55);
+  --color-brand-600: oklch(0.64 0.17 48);
+  --color-brand-700: oklch(0.54 0.15 45);
+  --color-brand-800: oklch(0.45 0.12 45);
+  --color-brand-900: oklch(0.38 0.09 45);
+
+  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-slide-up: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+}
+
+:root {
+  --bg: oklch(0.985 0.003 80);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.97 0.004 80);
+  --border: oklch(0.92 0.005 80);
+  --text: oklch(0.2 0.01 60);
+  --muted: oklch(0.52 0.012 60);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: oklch(0.16 0.006 60);
+  --surface: oklch(0.205 0.007 60);
+  --surface-2: oklch(0.245 0.008 60);
+  --border: oklch(0.3 0.008 60);
+  --text: oklch(0.96 0.004 80);
+  --muted: oklch(0.7 0.01 70);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background: var(--color-brand-300);
+  color: black;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
