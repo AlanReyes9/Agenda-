@@ -227,7 +227,7 @@ function CalendarSection({ settings, onSaved, onReload, readOnly }: { settings: 
   const [defaultRedirect, setDefaultRedirect] = useState("");
 
   useEffect(() => {
-    setDefaultRedirect(`${window.location.origin}/api/calendar/callback`);
+    setDefaultRedirect(`${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/api/calendar/callback`);
   }, []);
 
   const save = async () => {
