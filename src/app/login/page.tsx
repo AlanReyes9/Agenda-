@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BellRing, CalendarCheck2, MessageCircle } from "lucide-react";
@@ -14,6 +14,16 @@ export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+
+  useEffect(() => {
+    api<{ open: boolean }>("/api/auth/register")
+      .then((r) => {
+        setRegistrationOpen(r.open);
+        if (r.open) setMode("register");
+      })
+      .catch(() => setRegistrationOpen(false));
+  }, []);
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -87,9 +97,12 @@ export default function LoginPage() {
             {mode === "login" ? "Bienvenido de nuevo" : "Crear cuenta"}
           </h2>
           <p className="text-muted mt-1 text-sm">
-            {mode === "login" ? "Inicia sesión para ver las agendas del taller." : "La primera cuenta será la del administrador."}
+            {mode === "login"
+              ? "Inicia sesión para ver las agendas del taller."
+              : "Esta será la cuenta del administrador. Después, el registro se cierra."}
           </p>
 
+          {registrationOpen && (
           <div className="mt-6 grid grid-cols-2 rounded-xl bg-surface-2 p-1 text-sm">
             {(["login", "register"] as const).map((m) => (
               <button
@@ -105,6 +118,7 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
+          )}
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             {mode === "register" && (
@@ -130,6 +144,9 @@ export default function LoginPage() {
               {mode === "login" ? "Entrar" : "Crear cuenta"}
             </Button>
           </form>
+          {!registrationOpen && (
+            <p className="mt-6 text-center text-xs text-muted">¿No tienes cuenta? Pídesela al administrador del taller.</p>
+          )}
         </div>
       </div>
     </div>

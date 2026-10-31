@@ -8,7 +8,7 @@ Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + lucide-react 
 ## Arquitectura
 - API routes en `src/app/api/*`. Auth dual con `getSupabaseAndUser(request)` (`src/lib/supabase/server.ts`): cookies (web) o `Authorization: Bearer` (Android). Guard `requireStaff(request, {admin?})` en `src/lib/api.ts`.
 - Roles en `public.users.role`: `admin` | `staff` | `pending`. Primer usuario = admin (trigger `handle_new_auth_user`); el resto queda pendiente hasta aprobación. RLS usa funciones `is_staff()` / `is_admin()` (security definer, evitan recursión).
-- Registro: `/api/auth/register` crea el usuario confirmado con la service role key.
+- Registro público: solo abierto mientras no exista ninguna cuenta (función SQL `registration_open()`); el primer usuario es admin. Después, el admin crea cuentas en Configuración → Usuarios (`POST /api/users`). Ambos crean el usuario confirmado con la service role key.
 - `settings` (fila id=1, sin secretos) + `app_secrets` (client secret y refresh token de Google; RLS sin políticas → solo service role). La API nunca devuelve secretos, solo `google_client_secret_set`.
 - Google Calendar vía REST con `fetch` (`src/lib/google-calendar.ts`), sin googleapis. `syncAppointment` nunca lanza: devuelve `calendarSynced` / `calendarError`.
 

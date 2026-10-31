@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, CalendarCheck2, CalendarX2, Copy, KeyRound, MessageCircle, Plug, Save, ShieldCheck, Store, Trash2, Users } from "lucide-react";
+import { AlertTriangle, CalendarCheck2, CalendarX2, Copy, KeyRound, MessageCircle, Plug, Save, ShieldCheck, Store, Trash2, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/fetcher";
 import { useSettings } from "@/lib/hooks";
 import { formatDate } from "@/lib/dates";
@@ -391,9 +391,60 @@ function UsersSection({ meId }: { meId: string }) {
   };
 
   const pending = users?.filter((u) => u.role === "pending").length ?? 0;
+  const [adding, setAdding] = useState(false);
+  const [newUser, setNewUser] = useState({ full_name: "", email: "", password: "", role: "staff" });
+  const [creating, setCreating] = useState(false);
+  const createUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await api("/api/users", { method: "POST", json: newUser });
+      toast.success("Cuenta creada", { description: `Comparte el correo y la contraseña con ${newUser.full_name || newUser.email}.` });
+      setNewUser({ full_name: "", email: "", password: "", role: "staff" });
+      setAdding(false);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
-    <SectionCard icon={Users} title="Usuarios" description="Aprueba a las personas que se registran para que puedan usar la app." className="xl:col-span-2">
+    <SectionCard icon={Users} title="Usuarios" description="Crea las cuentas de tu personal. El registro público está cerrado." className="xl:col-span-2">
+      <div className="mb-4">
+        {adding ? (
+          <form onSubmit={createUser} className="grid gap-4 rounded-2xl border border-dashed border-brand-500/40 bg-brand-500/[0.03] p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Nombre">
+              <Input value={newUser.full_name} onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} placeholder="Nombre" />
+            </Field>
+            <Field label="Correo *">
+              <Input type="email" required value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder="correo@ejemplo.com" />
+            </Field>
+            <Field label="Contraseña *" hint="Mínimo 8 caracteres">
+              <Input type="text" required minLength={8} autoComplete="off" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+            </Field>
+            <Field label="Rol">
+              <Select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
+                <option value="staff">Personal</option>
+                <option value="admin">Administrador</option>
+              </Select>
+            </Field>
+            <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" loading={creating}>
+                Crear cuenta
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <Button variant="secondary" onClick={() => setAdding(true)}>
+            <UserPlus className="size-4" /> Agregar usuario
+          </Button>
+        )}
+      </div>
       {pending > 0 && (
         <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-sm font-medium text-amber-700 dark:text-amber-400">
           <ShieldCheck className="size-4" /> {pending} {pending === 1 ? "cuenta pendiente" : "cuentas pendientes"} de aprobación

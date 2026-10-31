@@ -261,3 +261,10 @@ revoke execute on function public.is_staff() from public, anon;
 revoke execute on function public.is_admin() from public, anon;
 grant execute on function public.is_staff() to authenticated;
 grant execute on function public.is_admin() to authenticated;
+
+-- El registro público solo está abierto mientras no exista ninguna cuenta
+create or replace function public.registration_open()
+returns boolean language sql stable security definer set search_path = '' as $$
+  select not exists (select 1 from public.users);
+$$;
+grant execute on function public.registration_open() to anon, authenticated;
