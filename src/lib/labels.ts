@@ -232,13 +232,18 @@ export function printLabelsInBrowser(spec: LabelSpec, cfg: PrinterConfig) {
   const src = renderToCanvas(spec, cfg.dpi, cfg).toDataURL("image/png");
   const img = `<img src="${src}" style="display:block;width:${spec.widthMm}mm;height:${spec.heightMm}mm;image-rendering:pixelated;image-rendering:crisp-edges">`;
   const pages = Array.from({ length: Math.max(1, cfg.copies) }, () => `<div class="label">${img}</div>`).join("");
+  // La página va en pulgadas redondeadas hacia abajo (63.5 × 35.6 mm → 2.50″ × 1.40″),
+  // igual que el tamaño configurado en el driver ZDesigner.
+  const pageWin = Math.floor((spec.widthMm / 25.4) * 100 + 1e-6) / 100;
+  const pageHin = Math.floor((spec.heightMm / 25.4) * 100 + 1e-6) / 100;
+  // El contenido queda 1.5 mm más corto que la página: así nunca se desborda a una
+  // segunda página (que la impresora saca como un sticker en blanco).
+  const boxHmm = (pageHin * 25.4 - 1.5).toFixed(2);
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta</title><style>
-    @page { size: ${spec.widthMm}mm ${(spec.heightMm - 1).toFixed(2)}mm; margin: 0; }
+    @page { size: ${pageWin.toFixed(2)}in ${pageHin.toFixed(2)}in; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     html, body { background: #fff; overflow: hidden; }
-    /* 1 mm menos que la página: evita que el redondeo del driver (35.6 mm → 1.40″)
-       genere una segunda página en blanco (sticker vacío). */
-    .label { width: ${spec.widthMm}mm; height: ${(spec.heightMm - 1).toFixed(2)}mm; overflow: hidden; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+    .label { width: ${pageWin.toFixed(2)}in; height: ${boxHmm}mm; overflow: hidden; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
     .label:last-child { page-break-after: auto; break-after: auto; }
   </style></head><body>${pages}</body></html>`.replace(/>\s+</g, "><");
 
