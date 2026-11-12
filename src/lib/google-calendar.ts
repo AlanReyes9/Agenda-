@@ -175,7 +175,7 @@ function eventBody(a: Appointment, workshopName: string) {
     a.client?.phone ? `Teléfono: ${a.client.phone}` : null,
     `Vehículo: ${vehicle}`,
     a.oil_type ? `Aceite: ${a.oil_type}` : null,
-    a.next_mileage ? `Próximo kilometraje: ${a.next_mileage} km` : null,
+    a.next_mileage ? `Próximo millaje: ${a.next_mileage} mi` : null,
     `Fecha: ${formatLongDate(a.next_due_date)}`,
     a.notes ? `Notas: ${a.notes}` : null,
     "",

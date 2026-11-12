@@ -187,23 +187,23 @@ export function AppointmentModal({
               ))}
             </datalist>
           </Field>
-          <Field label="Kilometraje actual">
-            <Input type="number" inputMode="numeric" min={0} value={form.mileage} onChange={set("mileage")} placeholder="85000" />
+          <Field label="Millaje actual">
+            <Input type="number" inputMode="numeric" min={0} value={form.mileage} onChange={set("mileage")} placeholder="240287" />
           </Field>
-          <Field label="Próximo km">
+          <Field label="Próximo millaje">
             <Input
               type="number"
               inputMode="numeric"
               min={0}
               value={form.next_mileage}
               onChange={set("next_mileage")}
-              placeholder={form.mileage ? String(Number(form.mileage) + 5000) : "90000"}
+              placeholder={form.mileage ? String(Number(form.mileage) + 3000) : "243287"}
             />
           </Field>
           <div className="flex items-end">
             {form.mileage && !form.next_mileage && (
-              <Button type="button" variant="secondary" className="w-full" onClick={() => setForm((f) => ({ ...f, next_mileage: String(Number(f.mileage) + 5000) }))}>
-                +5,000 km
+              <Button type="button" variant="secondary" className="w-full" onClick={() => setForm((f) => ({ ...f, next_mileage: String(Number(f.mileage) + 3000) }))}>
+                +3,000 mi
               </Button>
             )}
           </div>

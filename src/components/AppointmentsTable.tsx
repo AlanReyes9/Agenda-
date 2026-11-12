@@ -141,7 +141,7 @@ function AppointmentRow({
         {a.next_mileage ? (
           <div className="flex items-center gap-1.5 text-muted">
             <Gauge className="size-3.5" />
-            {a.next_mileage.toLocaleString("es-DO")} km
+            {a.next_mileage.toLocaleString("es-DO")} mi
           </div>
         ) : null}
         <StatusBadge status={status} />

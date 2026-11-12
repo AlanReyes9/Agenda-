@@ -7,7 +7,7 @@ export const TEMPLATE_VARIABLES = [
   { key: "{placa}", label: "Placa" },
   { key: "{fecha}", label: "Fecha del próximo cambio" },
   { key: "{aceite}", label: "Tipo de aceite" },
-  { key: "{kilometraje}", label: "Próximo kilometraje" },
+  { key: "{millaje}", label: "Próximo millaje" },
   { key: "{taller}", label: "Nombre del taller" },
 ] as const;
 
@@ -30,9 +30,19 @@ export function buildAppointmentMessage(
     placa: v?.plate || "sin placa",
     fecha: formatLongDate(appointment.next_due_date),
     aceite: appointment.oil_type || "su aceite habitual",
-    kilometraje: appointment.next_mileage ? `${appointment.next_mileage.toLocaleString("es-DO")} km` : "—",
+    millaje: appointment.next_mileage ? `${appointment.next_mileage.toLocaleString("es-DO")} mi` : "—",
+    // compatibilidad con plantillas que usaban {kilometraje}
+    kilometraje: appointment.next_mileage ? `${appointment.next_mileage.toLocaleString("es-DO")} mi` : "—",
     taller: workshopName,
   });
+}
+
+/** 8095364657 → 809-536-4657 (para mostrar e imprimir). */
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  const d = phone.replace(/\D/g, "");
+  const local = d.length === 11 && d.startsWith("1") ? d.slice(1) : d;
+  return local.length === 10 ? `${local.slice(0, 3)}-${local.slice(3, 6)}-${local.slice(6)}` : phone.trim();
 }
 
 /** Normaliza teléfonos de RD (809/829/849) al formato internacional que pide wa.me. */

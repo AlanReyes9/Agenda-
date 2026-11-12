@@ -21,6 +21,7 @@ async function loadSettings(supabase: SupabaseClient): Promise<Settings> {
   return {
     workshop_name: data?.workshop_name ?? "Auto Soluciones Daniel",
     workshop_phone: data?.workshop_phone ?? null,
+    workshop_address: data?.workshop_address ?? null,
     whatsapp_template: data?.whatsapp_template ?? "",
     reminder_days: data?.reminder_days ?? 7,
     google_client_id: data?.google_client_id ?? null,
@@ -53,7 +54,7 @@ export async function PATCH(request: Request) {
   const text = (k: string) => {
     if (b[k] !== undefined) update[k] = typeof b[k] === "string" && (b[k] as string).trim() ? (b[k] as string).trim() : null;
   };
-  ["workshop_phone", "google_client_id", "google_redirect_uri"].forEach(text);
+  ["workshop_phone", "workshop_address", "google_client_id", "google_redirect_uri"].forEach(text);
   if (b.workshop_name !== undefined) {
     const v = String(b.workshop_name ?? "").trim();
     if (!v) return jsonError("El nombre del taller es obligatorio");

@@ -10,7 +10,8 @@ export type LineSize = "xl" | "lg" | "md" | "sm" | "xs";
 
 export type LabelLine =
   | { kind: "text"; text: string; size: LineSize; bold?: boolean; align?: "center" | "left" }
-  | { kind: "rule" };
+  | { kind: "rule" }
+  | { kind: "space"; size: LineSize };
 
 export interface LabelSpec {
   widthMm: number;
@@ -28,6 +29,8 @@ export interface PrinterConfig {
   /** Algunas impresoras TSPL interpretan los bits al revés. */
   invertTspl: boolean;
   showQr: boolean;
+  /** Lenguaje para «Zebra directo»: EPL (LP 2844, TLP 2844) o ZPL (modelos -Z, ZD, GK…). */
+  zebraLang: "epl" | "zpl";
 }
 
 export const LABEL_PRESETS = [
@@ -41,6 +44,9 @@ export const LABEL_PRESETS = [
   { id: "100x150", label: "100 × 150 mm (4″ × 6″)", w: 100, h: 150 },
 ] as const;
 
+/** Fuente gruesa parecida a la del diseño de ZDesigner (Tahoma Bold en Windows). */
+export const LABEL_FONT = "Tahoma, Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif";
+
 export const DEFAULT_PRINTER: PrinterConfig = {
   widthMm: 63.5,
   heightMm: 35.6,
@@ -48,7 +54,8 @@ export const DEFAULT_PRINTER: PrinterConfig = {
   gapMm: 2,
   copies: 1,
   invertTspl: false,
-  showQr: true,
+  showQr: false,
+  zebraLang: "epl",
 };
 
 const WEIGHT: Record<LineSize, number> = { xl: 2.6, lg: 1.7, md: 1.25, sm: 1, xs: 0.82 };
@@ -104,7 +111,7 @@ function textWidthRatio(text: string, bold: boolean): number {
     measureCtx = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
   }
   if (measureCtx) {
-    measureCtx.font = `${bold ? "bold" : "500"} 100px Arial, Helvetica, sans-serif`;
+    measureCtx.font = `${bold ? "bold" : "500"} 100px ${LABEL_FONT}`;
     return measureCtx.measureText(text).width / 100;
   }
   let w = 0;
@@ -136,13 +143,20 @@ export function layoutLabel(spec: LabelSpec): Placed[] {
     }
   }
 
-  const lines = spec.lines.filter((l) => l.kind === "rule" || l.text.trim());
-  const units = lines.reduce((n, l) => n + (l.kind === "rule" ? RULE_SLOT : WEIGHT[l.size] * LINE_GAP), 0);
+  const lines = spec.lines.filter((l) => l.kind !== "text" || l.text.trim());
+  const units = lines.reduce(
+    (n, l) => n + (l.kind === "rule" ? RULE_SLOT : l.kind === "space" ? WEIGHT[l.size] * 0.5 : WEIGHT[l.size] * LINE_GAP),
+    0,
+  );
   if (!units) return out;
   const unit = (textBottom - textTop) / units;
 
   let y = textTop;
   for (const l of lines) {
+    if (l.kind === "space") {
+      y += unit * WEIGHT[l.size] * 0.5;
+      continue;
+    }
     if (l.kind === "rule") {
       const slot = unit * RULE_SLOT;
       const t = Math.max(0.25, Math.min(0.5, unit * 0.12));
@@ -226,7 +240,7 @@ export function printLabelsInBrowser(spec: LabelSpec, copies: number) {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta</title><style>
     @page { size: ${spec.widthMm}mm ${spec.heightMm}mm; margin: 0; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
+    html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: ${LABEL_FONT}; }
     .label { position: relative; width: ${spec.widthMm}mm; height: ${spec.heightMm}mm; overflow: hidden; page-break-after: always; break-after: page; }
     .label:last-child { page-break-after: auto; break-after: auto; }
   </style></head><body>${pages}</body></html>`;
@@ -272,7 +286,7 @@ export function renderToCanvas(spec: LabelSpec, dpi: number): HTMLCanvasElement 
     } else {
       let px = p.h * dpmm;
       const maxW = p.w * dpmm;
-      const font = (s: number) => `${p.bold ? "bold" : "500"} ${s}px Arial, Helvetica, sans-serif`;
+      const font = (s: number) => `${p.bold ? "bold" : "500"} ${s}px ${LABEL_FONT}`;
       ctx.font = font(px);
       const measured = ctx.measureText(p.text).width;
       if (measured > maxW) {
@@ -302,6 +316,28 @@ function canvasToBits(canvas: HTMLCanvasElement) {
     }
   }
   return { bits, bytesPerRow, height };
+}
+
+/* ------------------------------------------------------------------ */
+/* EPL2 (Zebra LP 2844, TLP 2844 y otras Zebra antiguas)                 */
+/* ------------------------------------------------------------------ */
+
+export function buildEpl(spec: LabelSpec, cfg: PrinterConfig): Uint8Array {
+  const canvas = renderToCanvas(spec, cfg.dpi);
+  const { bits, bytesPerRow, height } = canvasToBits(canvas);
+  // En EPL (GW) un bit en 0 imprime negro, igual que en TSPL.
+  const payload = cfg.invertTspl ? bits : bits.map((b) => ~b & 0xff);
+  const dpmm = cfg.dpi / 25.4;
+  const enc = new TextEncoder();
+  const head = enc.encode(
+    ["", "N", `q${bytesPerRow * 8}`, `Q${Math.round(spec.heightMm * dpmm)},${Math.round(cfg.gapMm * dpmm)}`, `GW0,0,${bytesPerRow},${height},`].join("\n"),
+  );
+  const tail = enc.encode(`\nP${Math.max(1, cfg.copies)}\n`);
+  const out = new Uint8Array(head.length + payload.length + tail.length);
+  out.set(head, 0);
+  out.set(payload, head.length);
+  out.set(tail, head.length + payload.length);
+  return out;
 }
 
 /* ------------------------------------------------------------------ */
@@ -415,7 +451,9 @@ export async function findZebraPrinter(): Promise<{ host: string; device: ZebraD
   return null;
 }
 
-export async function sendToZebra(host: string, device: ZebraDevice, zpl: string) {
+export async function sendToZebra(host: string, device: ZebraDevice, data: string | Uint8Array) {
+  // Browser Print recibe texto: los bytes del mapa de bits van como latin1 (1 carácter = 1 byte)
+  const zpl = typeof data === "string" ? data : Array.from(data, (b) => String.fromCharCode(b)).join("");
   const res = await withTimeout(
     fetch(`${host}/write`, {
       method: "POST",

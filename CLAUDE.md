@@ -14,7 +14,7 @@ Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + lucide-react 
 
 ## Módulos
 - **Calendario** (`/dashboard/calendario`): vista mensual (lunes primero) + lista; panel del día con `AppointmentsTable compact`. Sin librerías de calendario: date-fns.
-- **Etiquetas** (`/dashboard/etiquetas`, `src/lib/labels.ts`): un único diseño en mm (`layoutLabel`) genera la vista previa HTML, la impresión con el driver (`@page` del tamaño de la etiqueta), ZPL (texto nativo `^A0` + `^CI28`, QR como `^GFA`) y TSPL (mapa de bits `BITMAP`; en TSPL bit 0 = negro, opción «invertir»). Zebra directo vía Zebra Browser Print (`127.0.0.1:9100` / `:9101`). Configuración de impresora por equipo en `localStorage` (`label-printer`). `?agenda=<id>` rellena los datos.
+- **Etiquetas** (`/dashboard/etiquetas`, `src/lib/labels.ts`): UN solo formato, el del taller (diseño original en ZDesigner): sticker de aceite horizontal 2.5″ × 1.4″ (63.5 × 35.6 mm). Encabezado centrado (nombre; dirección - teléfono de `settings.workshop_address`/`workshop_phone`) y 4 renglones a la izquierda en mayúsculas: `FECHA d-M-yy PROX. d-M-yy`, `MI. ACTUAL. n`, `PROX. MI. n`, `ACEITE …`. Impresora del taller: **Zebra LP 2844 (EPL, 203 dpi)** compartida como `\\SERVIDOR\ZDesigner LP 2844`. Salidas: impresión con driver (`@page`), Zebra Browser Print en EPL (por defecto) o ZPL, y archivos EPL/ZPL/TSPL. EPL y TSPL usan mapa de bits (bit 0 = negro). `?agenda=<id>` rellena los datos. El taller usa **millas** (mi), no km.
 
 ## Reglas de negocio
 - Próximo cambio = `service_date` + `period_months` (trigger `compute_appointment_fields`). El estado se recalcula también en el cliente con `effectiveStatus()` (el de la BD puede quedar desfasado).

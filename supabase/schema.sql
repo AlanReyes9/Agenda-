@@ -268,3 +268,6 @@ returns boolean language sql stable security definer set search_path = '' as $$
   select not exists (select 1 from public.users);
 $$;
 grant execute on function public.registration_open() to anon, authenticated;
+
+-- Dirección del taller (se imprime en las etiquetas)
+alter table public.settings add column if not exists workshop_address text;

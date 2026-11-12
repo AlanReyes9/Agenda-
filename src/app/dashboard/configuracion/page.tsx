@@ -103,6 +103,7 @@ function WorkshopSection({ settings, onSaved, readOnly }: { settings: Settings; 
   const [form, setForm] = useState({
     workshop_name: settings.workshop_name,
     workshop_phone: settings.workshop_phone ?? "",
+    workshop_address: settings.workshop_address ?? "",
     reminder_days: String(settings.reminder_days),
   });
   const [saving, setSaving] = useState(false);
@@ -122,6 +123,9 @@ function WorkshopSection({ settings, onSaved, readOnly }: { settings: Settings; 
       <fieldset disabled={readOnly} className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre del taller" className="sm:col-span-2">
           <Input value={form.workshop_name} onChange={(e) => setForm({ ...form, workshop_name: e.target.value })} />
+        </Field>
+        <Field label="Dirección" className="sm:col-span-2" hint="Se imprime en las etiquetas de aceite.">
+          <Input value={form.workshop_address} onChange={(e) => setForm({ ...form, workshop_address: e.target.value })} placeholder="Calle # 00" />
         </Field>
         <Field label="Teléfono del taller">
           <Input value={form.workshop_phone} onChange={(e) => setForm({ ...form, workshop_phone: e.target.value })} placeholder="809-000-0000" />
@@ -165,7 +169,8 @@ function WhatsAppSection({ settings, onSaved, readOnly }: { settings: Settings; 
     placa: "A123456",
     fecha: "lunes 15 de diciembre de 2026",
     aceite: "5W-30 Sintético",
-    kilometraje: "95,000 km",
+    millaje: "243,287 mi",
+    kilometraje: "243,287 mi",
     taller: settings.workshop_name,
   });
 
