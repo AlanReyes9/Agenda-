@@ -377,11 +377,8 @@ function EtiquetasContent() {
               </Button>
             </div>
             <p className="text-xs text-muted">
-              En la ventana de impresión: impresora <b className="text-fg">ZDesigner LP 2844</b>, tamaño de papel <b className="text-fg">2.50 × 1.40 in</b>, márgenes <b className="text-fg">Ninguno</b> y escala <b className="text-fg">100%</b>. Para la mejor precisión usa <b className="text-fg">Zebra directo</b>.
+              En la ventana de impresión: impresora <b className="text-fg">ZDesigner LP 2844</b>, tamaño de papel <b className="text-fg">2.50 × 1.40 in</b>, márgenes <b className="text-fg">Ninguno</b> y escala <b className="text-fg">100%</b>.
             </p>
-            <Button variant="secondary" className="w-full" loading={busy} onClick={printZebraDirect}>
-              <Zap className="size-4" /> Zebra directo (Browser Print)
-            </Button>
 
             <Calibration printer={printer} onChange={updatePrinter} />
 
@@ -395,7 +392,7 @@ function EtiquetasContent() {
                   <Field label="Separación (mm)">
                     <Input type="number" min={0} max={10} step={0.5} value={printer.gapMm} onChange={(e) => updatePrinter({ gapMm: Math.max(0, Number(e.target.value) || 0) })} />
                   </Field>
-                  <Field label="Zebra directo">
+                  <Field label="Lenguaje Zebra">
                     <Select value={printer.zebraLang} onChange={(e) => updatePrinter({ zebraLang: e.target.value as "epl" | "zpl" })}>
                       <option value="epl">EPL (LP 2844)</option>
                       <option value="zpl">ZPL</option>
@@ -406,6 +403,14 @@ function EtiquetasContent() {
                   <input type="checkbox" className="accent-brand-500" checked={printer.invertTspl} onChange={(e) => updatePrinter({ invertTspl: e.target.checked })} />
                   La etiqueta sale en negativo (EPL / TSPL)
                 </label>
+                <div className="rounded-lg bg-surface-2/60 p-3 text-xs text-muted space-y-2">
+                  <p>
+                    <b className="text-fg">Zebra directo</b> solo funciona si la impresora está conectada por USB a esta computadora y tiene abierto Zebra Browser Print. Con la impresora compartida en red usa «Imprimir».
+                  </p>
+                  <Button variant="secondary" size="sm" loading={busy} onClick={printZebraDirect}>
+                    <Zap className="size-3.5" /> Zebra directo (USB)
+                  </Button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="ghost" size="sm" onClick={() => downloadFile(`${fileBase}.epl`, buildEpl(spec, printCfg))}>
                     <Download className="size-3.5" /> EPL
