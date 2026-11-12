@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Car, Check, CheckCircle2, Droplet, Gauge, MoreHorizontal, Pencil, Printer, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { CalendarCheck2, Car, Check, CheckCircle2, Droplet, Gauge, MoreHorizontal, Pencil, Printer, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { api } from "@/lib/fetcher";
 import { notifyCalendar } from "@/lib/calendar-toast";
 import { effectiveStatus, formatDate, relativeDays } from "@/lib/dates";
@@ -145,6 +145,11 @@ function AppointmentRow({
           </div>
         ) : null}
         <StatusBadge status={status} />
+        {!closed && a.google_event_id && (
+          <span title="Guardada en Google Calendar" className="inline-flex text-emerald-600 dark:text-emerald-400">
+            <CalendarCheck2 className="size-4" />
+          </span>
+        )}
       </div>
 
       <div className={cn("flex flex-wrap items-center gap-2", !compact && "lg:justify-end lg:flex-nowrap")}>

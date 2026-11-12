@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { appOrigin, errorMessage, requireStaff } from "@/lib/api";
-import { exchangeCodeForTokens, resolveGoogleCredentials, resolveRedirectUri } from "@/lib/google-calendar";
+import { CALENDAR_SCOPE, exchangeCodeForTokens, resolveGoogleCredentials, resolveRedirectUri } from "@/lib/google-calendar";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,12 @@ export async function GET(request: Request) {
   try {
     const creds = await resolveGoogleCredentials();
     const tokens = await exchangeCodeForTokens(creds, code, resolveRedirectUri(creds, origin));
+    if (tokens.scopes.length && !tokens.scopes.includes(CALENDAR_SCOPE)) {
+      return back({
+        calendar: "error",
+        message: "No se dio permiso a Google Calendar. Vuelve a conectar y marca la casilla «Ver, editar, compartir y eliminar… eventos».",
+      });
+    }
     const admin = createAdminClient();
     const refreshToken = tokens.refreshToken ?? creds.refreshToken;
     if (!refreshToken) {

@@ -31,6 +31,8 @@ export interface PrinterConfig {
 }
 
 export const LABEL_PRESETS = [
+  { id: "2.5x1.4", label: "2.5″ × 1.4″ (64 × 36 mm) — horizontal", w: 63.5, h: 35.6 },
+  { id: "1.4x2.5", label: "1.4″ × 2.5″ (36 × 64 mm) — vertical", w: 35.6, h: 63.5 },
   { id: "50x25", label: "50 × 25 mm (2″ × 1″)", w: 50, h: 25 },
   { id: "50x50", label: "50 × 50 mm (2″ × 2″)", w: 50, h: 50 },
   { id: "60x40", label: "60 × 40 mm", w: 60, h: 40 },
@@ -40,8 +42,8 @@ export const LABEL_PRESETS = [
 ] as const;
 
 export const DEFAULT_PRINTER: PrinterConfig = {
-  widthMm: 50,
-  heightMm: 50,
+  widthMm: 63.5,
+  heightMm: 35.6,
   dpi: 203,
   gapMm: 2,
   copies: 1,
@@ -95,8 +97,20 @@ function qrModules(data: string): boolean[][] {
   return rows;
 }
 
-/** Ancho aproximado de un carácter en relación con el alto de la fuente. */
-const charRatio = (bold: boolean) => (bold ? 0.6 : 0.55);
+/** Ancho del texto (en unidades de alto de fuente), medido con la fuente real cuando hay navegador. */
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function textWidthRatio(text: string, bold: boolean): number {
+  if (measureCtx === undefined) {
+    measureCtx = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
+  }
+  if (measureCtx) {
+    measureCtx.font = `${bold ? "bold" : "500"} 100px Arial, Helvetica, sans-serif`;
+    return measureCtx.measureText(text).width / 100;
+  }
+  let w = 0;
+  for (const ch of text) w += /[A-ZÁÉÍÓÚÑ0-9@MW]/.test(ch) ? 0.68 : /[\s.,:;·il|!]/.test(ch) ? 0.3 : 0.55;
+  return w * (bold ? 1.06 : 1);
+}
 
 export function layoutLabel(spec: LabelSpec): Placed[] {
   const { widthMm: W, heightMm: H } = spec;
@@ -111,7 +125,7 @@ export function layoutLabel(spec: LabelSpec): Placed[] {
     const modules = qrModules(spec.qr);
     if (W >= H * 1.3) {
       // Apaisada: QR a la derecha
-      const size = Math.min(H - 2 * m, W * 0.36);
+      const size = Math.min(H - 2 * m, W * 0.32);
       out.push({ kind: "qr", x: W - m - size, y: (H - size) / 2, size, modules });
       textW = W - 3 * m - size;
     } else {
@@ -139,7 +153,8 @@ export function layoutLabel(spec: LabelSpec): Placed[] {
     const slot = unit * WEIGHT[l.size] * LINE_GAP;
     const bold = Boolean(l.bold);
     let h = unit * WEIGHT[l.size];
-    const maxByWidth = textW / (Math.max(1, l.text.length) * charRatio(bold));
+    // 4% de margen de seguridad: la fuente de la impresora no es idéntica a Arial
+    const maxByWidth = (textW * 0.96) / Math.max(0.5, textWidthRatio(l.text, bold));
     h = Math.min(h, maxByWidth);
     out.push({
       kind: "text",

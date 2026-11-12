@@ -256,6 +256,21 @@ function CalendarSection({ settings, onSaved, onReload, readOnly }: { settings: 
     }
   };
 
+  const [syncing, setSyncing] = useState(false);
+  const syncAll = async () => {
+    setSyncing(true);
+    try {
+      const r = await api<{ pending: number; synced: number; failed: number; error: string | null }>("/api/calendar/sync", { method: "POST" });
+      if (r.error) toast.error("No se pudo guardar en Google Calendar", { description: r.error, duration: 15000 });
+      else if (r.pending === 0) toast.success("Todo al día: todas las agendas activas ya están en Google Calendar");
+      else toast.success(`${r.synced} ${r.synced === 1 ? "agenda guardada" : "agendas guardadas"} en Google Calendar`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const redirect = form.google_redirect_uri || defaultRedirect;
 
   return (
@@ -278,11 +293,16 @@ function CalendarSection({ settings, onSaved, onReload, readOnly }: { settings: 
           </div>
         </div>
         {!readOnly && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {settings.google_connected && (
-              <Button variant="secondary" onClick={disconnect} loading={disconnecting}>
-                Desconectar
-              </Button>
+              <>
+                <Button variant="secondary" onClick={syncAll} loading={syncing} title="Sube a Google las agendas activas que aún no tienen evento">
+                  <CalendarCheck2 className="size-4" /> Sincronizar agendas
+                </Button>
+                <Button variant="ghost" onClick={disconnect} loading={disconnecting}>
+                  Desconectar
+                </Button>
+              </>
             )}
             <a href="/api/calendar/connect">
               <Button type="button" disabled={!settings.google_client_id || !settings.google_client_secret_set}>

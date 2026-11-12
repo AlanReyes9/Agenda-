@@ -98,7 +98,7 @@ export function AppointmentModal({
         res = await api(`/api/appointments/${mode.appointment.id}/renew`, { method: "POST", json: payload });
         toast.success("Agenda renovada", { description: nextDue ? `Próximo cambio: ${formatLongDate(nextDue)}` : undefined });
       }
-      notifyCalendar(res);
+      notifyCalendar(res, mode.type === "edit" ? undefined : "📅 Guardada en Google Calendar");
       onSaved();
       onClose();
     } catch (err) {

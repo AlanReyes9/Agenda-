@@ -99,6 +99,7 @@ export async function exchangeCodeForTokens(creds: GoogleCredentials, code: stri
     accessToken: data.access_token as string,
     refreshToken: (data.refresh_token as string | undefined) ?? null,
     email,
+    scopes: String(data.scope ?? "").split(" ").filter(Boolean),
   };
 }
 
@@ -286,8 +287,24 @@ export async function syncAppointment(
     }
     return { calendarSynced: true };
   } catch (e) {
-    return { calendarSynced: false, calendarError: e instanceof Error ? e.message : String(e) };
+    const msg = friendlyCalendarError(e instanceof Error ? e.message : String(e));
+    console.error("[calendar] sync failed", a.id, msg);
+    return { calendarSynced: false, calendarError: msg };
   }
+}
+
+export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+
+/** Traduce los errores más comunes de Google a algo entendible. */
+export function friendlyCalendarError(msg: string): string {
+  if (/insufficient.*scope|insufficientPermissions|Request had insufficient authentication scopes/i.test(msg)) {
+    return "Google no dio permiso para editar el calendario. Reconecta en Configuración y marca la casilla de Google Calendar.";
+  }
+  if (/has not been used|is disabled|accessNotConfigured/i.test(msg)) {
+    return "La Google Calendar API no está activada en tu proyecto de Google Cloud. Actívala y vuelve a intentar.";
+  }
+  if (/Not Found/i.test(msg)) return "No se encontró el calendario configurado. Revisa el «ID del calendario» (normalmente: primary).";
+  return msg;
 }
 
 export type { CalendarEvent };

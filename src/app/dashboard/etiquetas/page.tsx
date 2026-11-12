@@ -46,7 +46,7 @@ interface Fields {
   freeText: string;
 }
 
-const STORAGE_KEY = "label-printer";
+const STORAGE_KEY = "label-printer-v2";
 
 function loadPrinter(): PrinterConfig {
   try {
@@ -105,12 +105,14 @@ function buildLines(t: Template, f: Fields): LabelLine[] {
     T(f.phone, "xs"),
     rule,
     T(f.title || "TICKET DE SERVICIO", "sm", true),
-    left(join(f.client, f.vehicle), "sm", true),
-    left(join(f.plate && `Placa ${f.plate}`, f.km && kmText(f.km))),
-    left(join(f.serviceDate && `Fecha ${dmy(f.serviceDate)}`, f.oil && `Aceite ${f.oil}`)),
-    left(f.notes ? `Notas: ${f.notes}` : ""),
+    left(f.client, "sm", true),
+    left(join(f.vehicle, f.plate)),
+    left(join(f.serviceDate && dmy(f.serviceDate), f.km && kmText(f.km))),
+    left(f.oil ? `Aceite ${f.oil}` : ""),
+    left(f.notes),
     rule,
-    T(join(f.nextDate && `Próximo cambio: ${dmy(f.nextDate)}`, f.nextKm && `o ${kmText(f.nextKm)}`), "md", true),
+    T(f.nextDate ? `Próximo cambio: ${dmy(f.nextDate)}` : "", "md", true),
+    T(f.nextKm ? `o a los ${kmText(f.nextKm)}` : "", "sm"),
     T(f.footer, "xs"),
   ];
 }
@@ -438,10 +440,10 @@ function EtiquetasContent() {
                 </Select>
               </Field>
               <Field label="Ancho (mm)">
-                <Input type="number" min={20} max={120} value={printer.widthMm} onChange={(e) => updatePrinter({ widthMm: Math.max(20, Math.min(120, Number(e.target.value) || 20)) })} />
+                <Input type="number" min={20} max={120} step={0.1} value={printer.widthMm} onChange={(e) => updatePrinter({ widthMm: Math.max(20, Math.min(120, Number(e.target.value) || 20)) })} />
               </Field>
               <Field label="Alto (mm)">
-                <Input type="number" min={15} max={200} value={printer.heightMm} onChange={(e) => updatePrinter({ heightMm: Math.max(15, Math.min(200, Number(e.target.value) || 15)) })} />
+                <Input type="number" min={15} max={200} step={0.1} value={printer.heightMm} onChange={(e) => updatePrinter({ heightMm: Math.max(15, Math.min(200, Number(e.target.value) || 15)) })} />
               </Field>
               <Field label="Resolución">
                 <Select value={printer.dpi} onChange={(e) => updatePrinter({ dpi: Number(e.target.value) as 203 | 300 })}>
