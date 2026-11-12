@@ -17,6 +17,8 @@ export interface LabelDesign {
   widthMm: number;
   heightMm: number;
   rows: DesignRow[];
+  /** Imprime todo el texto en mayúsculas. */
+  uppercase?: boolean;
 }
 
 export const SIZE_OPTIONS: { value: LineSize; label: string }[] = [
@@ -88,6 +90,7 @@ export const DESIGN_PRESETS: { id: string; name: string; build: () => LabelDesig
     name: "Sticker (formato ZDesigner)",
     build: () => ({
       ...DEFAULT_SIZE,
+      uppercase: true,
       rows: [
         row("{taller}", "lg", true),
         row("{direccion} - {telefono}", "md", true),
@@ -126,6 +129,7 @@ export function sanitizeDesign(input: unknown): LabelDesign | null {
     widthMm: num(d.widthMm, 30, 120, DEFAULT_SIZE.widthMm),
     heightMm: num(d.heightMm, 15, 100, DEFAULT_SIZE.heightMm),
     rows,
+    uppercase: Boolean(d.uppercase),
   };
 }
 
@@ -157,7 +161,8 @@ export function renderDesign(design: LabelDesign, values: DesignValues): LabelLi
     if (r.kind === "rule") out.push({ kind: "rule" });
     else if (r.kind === "space") out.push({ kind: "space", size: r.size });
     else {
-      const text = renderRowText(r.text, values);
+      const raw = renderRowText(r.text, values);
+      const text = design.uppercase ? raw.toLocaleUpperCase("es") : raw;
       if (text) out.push({ kind: "text", text, size: r.size, bold: r.bold, align: r.align });
     }
   }

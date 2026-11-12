@@ -27,6 +27,12 @@ export interface PrinterConfig {
   invertTspl: boolean;
   /** Lenguaje para «Zebra directo»: EPL (LP 2844, TLP 2844) o ZPL (modelos -Z, ZD, GK…). */
   zebraLang: "epl" | "zpl";
+  /** Calibración por computadora: mover (mm) y escalar (%) lo que se imprime. */
+  offsetXmm: number;
+  offsetYmm: number;
+  scalePct: number;
+  /** Imprime un borde en el contorno de la etiqueta para calibrar. */
+  testBorder: boolean;
 }
 
 export const LABEL_PRESETS = [
@@ -51,7 +57,36 @@ export const DEFAULT_PRINTER: PrinterConfig = {
   copies: 1,
   invertTspl: false,
   zebraLang: "epl",
+  offsetXmm: 0,
+  offsetYmm: 0,
+  scalePct: 100,
+  testBorder: false,
 };
+
+/** Aplica la calibración (escala desde la esquina y desplazamiento) y el borde de prueba. */
+export function placedForPrint(spec: LabelSpec, cfg?: Pick<PrinterConfig, "offsetXmm" | "offsetYmm" | "scalePct" | "testBorder">): Placed[] {
+  const base = layoutLabel(spec);
+  if (cfg?.testBorder) {
+    const t = 0.5;
+    const { widthMm: W, heightMm: H } = spec;
+    base.push(
+      { kind: "rule", x: 0, y: 0, w: W, t },
+      { kind: "rule", x: 0, y: H - t, w: W, t },
+      { kind: "rule", x: 0, y: 0, w: t, t: H },
+      { kind: "rule", x: W - t, y: 0, w: t, t: H },
+    );
+  }
+  if (!cfg) return base;
+  const k = (cfg.scalePct || 100) / 100;
+  const dx = cfg.offsetXmm || 0;
+  const dy = cfg.offsetYmm || 0;
+  if (k === 1 && !dx && !dy) return base;
+  return base.map((p) =>
+    p.kind === "rule"
+      ? { ...p, x: p.x * k + dx, y: p.y * k + dy, w: p.w * k, t: p.t * k }
+      : { ...p, x: p.x * k + dx, y: p.y * k + dy, w: p.w * k, h: p.h * k },
+  );
+}
 
 const WEIGHT: Record<LineSize, number> = { xl: 2.6, lg: 1.7, md: 1.25, sm: 1, xs: 0.82 };
 const LINE_GAP = 1.22;
@@ -186,15 +221,17 @@ export function labelInnerHtml(placed: Placed[]): string {
     .join("");
 }
 
-export function printLabelsInBrowser(spec: LabelSpec, copies: number) {
-  const placed = layoutLabel(spec);
-  const inner = labelInnerHtml(placed);
-  const pages = Array.from({ length: Math.max(1, copies) }, () => `<div class="label">${inner}</div>`).join("");
+export function printLabelsInBrowser(spec: LabelSpec, cfg: PrinterConfig) {
+  // Se imprime como imagen en blanco y negro puro a la resolución de la impresora:
+  // así el driver no difumina (gris) ni reacomoda el texto.
+  const src = renderToCanvas(spec, cfg.dpi, cfg).toDataURL("image/png");
+  const img = `<img src="${src}" style="display:block;width:${spec.widthMm}mm;height:${spec.heightMm}mm;image-rendering:pixelated;image-rendering:crisp-edges">`;
+  const pages = Array.from({ length: Math.max(1, cfg.copies) }, () => `<div class="label">${img}</div>`).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta</title><style>
     @page { size: ${spec.widthMm}mm ${spec.heightMm}mm; margin: 0; }
-    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    html, body { margin: 0; padding: 0; background: #fff; color: #000; font-family: ${LABEL_FONT}; }
-    .label { position: relative; width: ${spec.widthMm}mm; height: ${spec.heightMm}mm; overflow: hidden; page-break-after: always; break-after: page; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body { background: #fff; }
+    .label { width: ${spec.widthMm}mm; height: ${spec.heightMm}mm; overflow: hidden; page-break-after: always; break-after: page; }
     .label:last-child { page-break-after: auto; break-after: auto; }
   </style></head><body>${pages}</body></html>`;
 
@@ -216,7 +253,7 @@ export function printLabelsInBrowser(spec: LabelSpec, copies: number) {
 /* Mapa de bits (canvas) — base de TSPL                                 */
 /* ------------------------------------------------------------------ */
 
-export function renderToCanvas(spec: LabelSpec, dpi: number): HTMLCanvasElement {
+export function renderToCanvas(spec: LabelSpec, dpi: number, cfg?: PrinterConfig): HTMLCanvasElement {
   const dpmm = dpi / 25.4;
   const W = Math.round(spec.widthMm * dpmm);
   const H = Math.round(spec.heightMm * dpmm);
@@ -227,7 +264,7 @@ export function renderToCanvas(spec: LabelSpec, dpi: number): HTMLCanvasElement 
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = "#000";
-  for (const p of layoutLabel(spec)) {
+  for (const p of placedForPrint(spec, cfg)) {
     if (p.kind === "rule") {
       ctx.fillRect(Math.round(p.x * dpmm), Math.round(p.y * dpmm), Math.round(p.w * dpmm), Math.max(1, Math.round(p.t * dpmm)));
     } else {
@@ -246,6 +283,15 @@ export function renderToCanvas(spec: LabelSpec, dpi: number): HTMLCanvasElement 
       ctx.fillText(p.text, x, p.y * dpmm + (p.h * dpmm - px) / 2);
     }
   }
+  // Blanco y negro puro (sin grises del suavizado)
+  const img = ctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let k = 0; k < d.length; k += 4) {
+    const v = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2] < 140 ? 0 : 255;
+    d[k] = d[k + 1] = d[k + 2] = v;
+    d[k + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
   return canvas;
 }
 
@@ -270,7 +316,7 @@ function canvasToBits(canvas: HTMLCanvasElement) {
 /* ------------------------------------------------------------------ */
 
 export function buildEpl(spec: LabelSpec, cfg: PrinterConfig): Uint8Array {
-  const canvas = renderToCanvas(spec, cfg.dpi);
+  const canvas = renderToCanvas(spec, cfg.dpi, cfg);
   const { bits, bytesPerRow, height } = canvasToBits(canvas);
   // En EPL (GW) un bit en 0 imprime negro, igual que en TSPL.
   const payload = cfg.invertTspl ? bits : bits.map((b) => ~b & 0xff);
@@ -292,7 +338,7 @@ export function buildEpl(spec: LabelSpec, cfg: PrinterConfig): Uint8Array {
 /* ------------------------------------------------------------------ */
 
 export function buildTspl(spec: LabelSpec, cfg: PrinterConfig): Uint8Array {
-  const canvas = renderToCanvas(spec, cfg.dpi);
+  const canvas = renderToCanvas(spec, cfg.dpi, cfg);
   const { bits, bytesPerRow, height } = canvasToBits(canvas);
   // En TSPL un bit en 0 imprime negro: invertimos salvo que la impresora pida lo contrario.
   const payload = cfg.invertTspl ? bits : bits.map((b) => ~b & 0xff);
@@ -325,8 +371,8 @@ export function buildZpl(spec: LabelSpec, cfg: PrinterConfig): string {
   const d = (mm: number) => Math.max(0, Math.round(mm * dpmm));
   const clean = (s: string) => s.replace(/[\^~\\]/g, " ");
   const parts = ["^XA", "^CI28", `^PW${d(spec.widthMm)}`, `^LL${d(spec.heightMm)}`, "^LH0,0"];
-  for (const p of layoutLabel(spec)) {
-    if (p.kind === "rule") parts.push(`^FO${d(p.x)},${d(p.y)}^GB${d(p.w)},${Math.max(1, d(p.t))},${Math.max(1, d(p.t))}^FS`);
+  for (const p of placedForPrint(spec, cfg)) {
+    if (p.kind === "rule") parts.push(`^FO${d(p.x)},${d(p.y)}^GB${Math.max(1, d(p.w))},${Math.max(1, d(p.t))},${Math.max(1, Math.min(d(p.w), d(p.t)))}^FS`);
     else {
       const h = Math.max(10, d(p.h * 1.12)); // la fuente 0 es algo más baja que Arial
       parts.push(`^FO${d(p.x)},${d(p.y)}^A0N,${h},${Math.round(h * (p.bold ? 0.95 : 0.85))}^FB${d(p.w)},1,0,${p.align === "center" ? "C" : "L"},0^FD${clean(p.text)}^FS`);

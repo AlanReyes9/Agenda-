@@ -7,6 +7,8 @@ import {
   AlignCenter,
   AlignLeft,
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Bold,
   ChevronDown,
@@ -371,16 +373,18 @@ function EtiquetasContent() {
               <Field label="Copias" className="w-28">
                 <Input type="number" min={1} max={100} value={printer.copies} onChange={(e) => updatePrinter({ copies: Math.max(1, Math.min(100, Number(e.target.value) || 1)) })} />
               </Field>
-              <Button size="lg" className="flex-1" onClick={() => printLabelsInBrowser(spec, printer.copies)}>
+              <Button size="lg" className="flex-1" onClick={() => printLabelsInBrowser(spec, printCfg)}>
                 <Printer className="size-4" /> Imprimir
               </Button>
             </div>
             <p className="text-xs text-muted">
-              Elige <b className="text-fg">ZDesigner LP 2844</b> en la ventana de impresión, con márgenes <b className="text-fg">Ninguno</b> y escala <b className="text-fg">100%</b>.
+              En la ventana de impresión: impresora <b className="text-fg">ZDesigner LP 2844</b>, tamaño de papel <b className="text-fg">2.50 × 1.40 in</b>, márgenes <b className="text-fg">Ninguno</b> y escala <b className="text-fg">100%</b>. Para la mejor precisión usa <b className="text-fg">Zebra directo</b>.
             </p>
             <Button variant="secondary" className="w-full" loading={busy} onClick={printZebraDirect}>
               <Zap className="size-4" /> Zebra directo (Browser Print)
             </Button>
+
+            <Calibration printer={printer} onChange={updatePrinter} />
 
             <button onClick={() => setShowAdvanced((s) => !s)} className="flex w-full items-center justify-between pt-2 text-sm font-medium text-muted hover:text-fg cursor-pointer">
               Opciones avanzadas
@@ -499,6 +503,11 @@ function DesignEditor({
           </Button>
         ))}
       </div>
+
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" className="accent-brand-500" checked={Boolean(design.uppercase)} onChange={(e) => onChange({ ...design, uppercase: e.target.checked })} />
+        Todo en MAYÚSCULAS
+      </label>
 
       <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
         <Field label="Ancho (mm)" hint={`${(design.widthMm / 25.4).toFixed(2)}″`}>
@@ -674,5 +683,99 @@ function IconToggle({
     >
       {children}
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Calibración de posición (se guarda en esta computadora)              */
+/* ------------------------------------------------------------------ */
+
+function Calibration({ printer, onChange }: { printer: PrinterConfig; onChange: (p: Partial<PrinterConfig>) => void }) {
+  const [open, setOpen] = useState(false);
+  const round = (n: number) => Math.round(n * 10) / 10;
+  const changed = printer.offsetXmm !== 0 || printer.offsetYmm !== 0 || printer.scalePct !== 100;
+  const Step = ({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) => (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className="grid size-9 place-items-center rounded-lg border border-line bg-surface text-muted hover:text-fg hover:border-brand-500/50 transition cursor-pointer"
+    >
+      {children}
+    </button>
+  );
+  return (
+    <div className="rounded-xl border border-line">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium cursor-pointer">
+        <span>
+          Ajustar posición
+          {changed && (
+            <span className="ml-2 text-xs font-normal text-muted">
+              ({printer.offsetXmm > 0 ? "+" : ""}
+              {printer.offsetXmm} / {printer.offsetYmm > 0 ? "+" : ""}
+              {printer.offsetYmm} mm · {printer.scalePct}%)
+            </span>
+          )}
+        </span>
+        <ChevronDown className={cn("size-4 text-muted transition", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="space-y-4 border-t border-line p-4">
+          <p className="text-xs text-muted">
+            Si la etiqueta sale cortada o corrida, muévela aquí y vuelve a imprimir. Activa el <b className="text-fg">borde de prueba</b>: cuando el borde coincida con el contorno del sticker, está calibrada.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Horizontal</p>
+              <div className="flex items-center gap-1.5">
+                <Step label="Mover a la izquierda" onClick={() => onChange({ offsetXmm: round(printer.offsetXmm - 0.5) })}>
+                  <ArrowLeft className="size-4" />
+                </Step>
+                <span className="w-16 text-center text-sm tabular-nums">{printer.offsetXmm} mm</span>
+                <Step label="Mover a la derecha" onClick={() => onChange({ offsetXmm: round(printer.offsetXmm + 0.5) })}>
+                  <ArrowRight className="size-4" />
+                </Step>
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Vertical</p>
+              <div className="flex items-center gap-1.5">
+                <Step label="Mover hacia arriba" onClick={() => onChange({ offsetYmm: round(printer.offsetYmm - 0.5) })}>
+                  <ArrowUp className="size-4" />
+                </Step>
+                <span className="w-16 text-center text-sm tabular-nums">{printer.offsetYmm} mm</span>
+                <Step label="Mover hacia abajo" onClick={() => onChange({ offsetYmm: round(printer.offsetYmm + 0.5) })}>
+                  <ArrowDown className="size-4" />
+                </Step>
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Tamaño</p>
+              <div className="flex items-center gap-1.5">
+                <Step label="Más pequeño" onClick={() => onChange({ scalePct: Math.max(50, printer.scalePct - 2) })}>
+                  <Minus className="size-4" />
+                </Step>
+                <span className="w-16 text-center text-sm tabular-nums">{printer.scalePct}%</span>
+                <Step label="Más grande" onClick={() => onChange({ scalePct: Math.min(150, printer.scalePct + 2) })}>
+                  <Plus className="size-4" />
+                </Step>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" className="accent-brand-500" checked={printer.testBorder} onChange={(e) => onChange({ testBorder: e.target.checked })} />
+              Imprimir borde de prueba
+            </label>
+            {changed && (
+              <Button size="sm" variant="ghost" onClick={() => onChange({ offsetXmm: 0, offsetYmm: 0, scalePct: 100 })}>
+                <RotateCcw className="size-3.5" /> Restablecer
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
