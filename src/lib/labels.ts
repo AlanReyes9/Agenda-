@@ -31,6 +31,8 @@ export interface PrinterConfig {
   offsetXmm: number;
   offsetYmm: number;
   scalePct: number;
+  /** Escala extra solo en vertical (para cuando sale más alta o más baja que el sticker). */
+  scaleYPct: number;
   /** Imprime un borde en el contorno de la etiqueta para calibrar. */
   testBorder: boolean;
 }
@@ -60,11 +62,12 @@ export const DEFAULT_PRINTER: PrinterConfig = {
   offsetXmm: 0,
   offsetYmm: 0,
   scalePct: 100,
+  scaleYPct: 100,
   testBorder: false,
 };
 
 /** Aplica la calibración (escala desde la esquina y desplazamiento) y el borde de prueba. */
-export function placedForPrint(spec: LabelSpec, cfg?: Pick<PrinterConfig, "offsetXmm" | "offsetYmm" | "scalePct" | "testBorder">): Placed[] {
+export function placedForPrint(spec: LabelSpec, cfg?: Pick<PrinterConfig, "offsetXmm" | "offsetYmm" | "scalePct" | "scaleYPct" | "testBorder">): Placed[] {
   const base = layoutLabel(spec);
   if (cfg?.testBorder) {
     const t = 0.5;
@@ -77,14 +80,16 @@ export function placedForPrint(spec: LabelSpec, cfg?: Pick<PrinterConfig, "offse
     );
   }
   if (!cfg) return base;
-  const k = (cfg.scalePct || 100) / 100;
+  const kx = (cfg.scalePct || 100) / 100;
+  const ky = kx * ((cfg.scaleYPct || 100) / 100);
   const dx = cfg.offsetXmm || 0;
   const dy = cfg.offsetYmm || 0;
-  if (k === 1 && !dx && !dy) return base;
+  if (kx === 1 && ky === 1 && !dx && !dy) return base;
   return base.map((p) =>
     p.kind === "rule"
-      ? { ...p, x: p.x * k + dx, y: p.y * k + dy, w: p.w * k, t: p.t * k }
-      : { ...p, x: p.x * k + dx, y: p.y * k + dy, w: p.w * k, h: p.h * k },
+      ? { ...p, x: p.x * kx + dx, y: p.y * ky + dy, w: p.w * kx, t: p.t * ky }
+      : // la letra se escala con el menor factor para no deformarse ni salirse
+        { ...p, x: p.x * kx + dx, y: p.y * ky + dy + (p.h * ky - p.h * Math.min(kx, ky)) / 2, w: p.w * kx, h: p.h * Math.min(kx, ky) },
   );
 }
 

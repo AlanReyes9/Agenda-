@@ -694,7 +694,8 @@ function IconToggle({
 function Calibration({ printer, onChange }: { printer: PrinterConfig; onChange: (p: Partial<PrinterConfig>) => void }) {
   const [open, setOpen] = useState(false);
   const round = (n: number) => Math.round(n * 10) / 10;
-  const changed = printer.offsetXmm !== 0 || printer.offsetYmm !== 0 || printer.scalePct !== 100;
+  const scaleY = printer.scaleYPct ?? 100;
+  const changed = printer.offsetXmm !== 0 || printer.offsetYmm !== 0 || printer.scalePct !== 100 || scaleY !== 100;
   const Step = ({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) => (
     <button
       type="button"
@@ -715,7 +716,7 @@ function Calibration({ printer, onChange }: { printer: PrinterConfig; onChange: 
             <span className="ml-2 text-xs font-normal text-muted">
               ({printer.offsetXmm > 0 ? "+" : ""}
               {printer.offsetXmm} / {printer.offsetYmm > 0 ? "+" : ""}
-              {printer.offsetYmm} mm · {printer.scalePct}%)
+              {printer.offsetYmm} mm · {printer.scalePct}%{scaleY !== 100 ? ` · alto ${scaleY}%` : ""})
             </span>
           )}
         </span>
@@ -726,7 +727,7 @@ function Calibration({ printer, onChange }: { printer: PrinterConfig; onChange: 
           <p className="text-xs text-muted">
             Si la etiqueta sale cortada o corrida, muévela aquí y vuelve a imprimir. Activa el <b className="text-fg">borde de prueba</b>: cuando el borde coincida con el contorno del sticker, está calibrada.
           </p>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Horizontal</p>
               <div className="flex items-center gap-1.5">
@@ -763,6 +764,18 @@ function Calibration({ printer, onChange }: { printer: PrinterConfig; onChange: 
                 </Step>
               </div>
             </div>
+            <div>
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Alto</p>
+              <div className="flex items-center gap-1.5">
+                <Step label="Menos alto" onClick={() => onChange({ scaleYPct: Math.max(50, scaleY - 2) })}>
+                  <Minus className="size-4" />
+                </Step>
+                <span className="w-16 text-center text-sm tabular-nums">{scaleY}%</span>
+                <Step label="Más alto" onClick={() => onChange({ scaleYPct: Math.min(150, scaleY + 2) })}>
+                  <Plus className="size-4" />
+                </Step>
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -770,7 +783,7 @@ function Calibration({ printer, onChange }: { printer: PrinterConfig; onChange: 
               Imprimir borde de prueba
             </label>
             {changed && (
-              <Button size="sm" variant="ghost" onClick={() => onChange({ offsetXmm: 0, offsetYmm: 0, scalePct: 100 })}>
+              <Button size="sm" variant="ghost" onClick={() => onChange({ offsetXmm: 0, offsetYmm: 0, scalePct: 100, scaleYPct: 100 })}>
                 <RotateCcw className="size-3.5" /> Restablecer
               </Button>
             )}
