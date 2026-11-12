@@ -173,7 +173,7 @@ export function AppointmentModal({
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-muted">Próximo cambio</p>
-              <p className="font-semibold capitalize">{formatLongDate(nextDue)}</p>
+              <p className="font-semibold first-letter:uppercase">{formatLongDate(nextDue)}</p>
             </div>
           </div>
         )}

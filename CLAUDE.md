@@ -12,6 +12,10 @@ Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + lucide-react 
 - `settings` (fila id=1, sin secretos) + `app_secrets` (client secret y refresh token de Google; RLS sin políticas → solo service role). La API nunca devuelve secretos, solo `google_client_secret_set`.
 - Google Calendar vía REST con `fetch` (`src/lib/google-calendar.ts`), sin googleapis. `syncAppointment` nunca lanza: devuelve `calendarSynced` / `calendarError`.
 
+## Módulos
+- **Calendario** (`/dashboard/calendario`): vista mensual (lunes primero) + lista; panel del día con `AppointmentsTable compact`. Sin librerías de calendario: date-fns.
+- **Etiquetas** (`/dashboard/etiquetas`, `src/lib/labels.ts`): un único diseño en mm (`layoutLabel`) genera la vista previa HTML, la impresión con el driver (`@page` del tamaño de la etiqueta), ZPL (texto nativo `^A0` + `^CI28`, QR como `^GFA`) y TSPL (mapa de bits `BITMAP`; en TSPL bit 0 = negro, opción «invertir»). Zebra directo vía Zebra Browser Print (`127.0.0.1:9100` / `:9101`). Configuración de impresora por equipo en `localStorage` (`label-printer`). `?agenda=<id>` rellena los datos.
+
 ## Reglas de negocio
 - Próximo cambio = `service_date` + `period_months` (trigger `compute_appointment_fields`). El estado se recalcula también en el cliente con `effectiveStatus()` (el de la BD puede quedar desfasado).
 - `period_months = 0` es válido (evento externo). Nunca validar con `!period_months`.

@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarClock, Droplet, LayoutDashboard, LogOut, Menu, Moon, Settings, Sun, Users, X } from "lucide-react";
+import { CalendarClock, CalendarDays, Droplet, LayoutDashboard, LogOut, Menu, Moon, Printer, Settings, Sun, Users, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn, initials } from "@/lib/utils";
 import type { AppUser } from "@/lib/types";
 
 const NAV = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/dashboard/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/dashboard/agendas", label: "Agendas", icon: CalendarClock },
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
+  { href: "/dashboard/etiquetas", label: "Etiquetas", icon: Printer },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
 ];
 

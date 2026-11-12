@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Car, Check, CheckCircle2, Droplet, Gauge, MoreHorizontal, Pencil, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { Car, Check, CheckCircle2, Droplet, Gauge, MoreHorizontal, Pencil, Printer, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { api } from "@/lib/fetcher";
 import { notifyCalendar } from "@/lib/calendar-toast";
 import { effectiveStatus, formatDate, relativeDays } from "@/lib/dates";
@@ -17,8 +18,10 @@ export function AppointmentsTable({
   onEdit,
   onRenew,
   onChanged,
+  compact,
 }: {
   appointments: Appointment[];
+  compact?: boolean;
   settings: Settings | null;
   onEdit: (a: Appointment) => void;
   onRenew: (a: Appointment) => void;
@@ -34,6 +37,7 @@ export function AppointmentsTable({
           onEdit={() => onEdit(a)}
           onRenew={() => onRenew(a)}
           onChanged={onChanged}
+          compact={compact}
         />
       ))}
     </div>
@@ -46,8 +50,10 @@ function AppointmentRow({
   onEdit,
   onRenew,
   onChanged,
+  compact,
 }: {
   a: Appointment;
+  compact?: boolean;
   settings: Settings | null;
   onEdit: () => void;
   onRenew: () => void;
@@ -56,6 +62,7 @@ function AppointmentRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
+  const router = useRouter();
   const status = effectiveStatus(a, settings?.reminder_days ?? 7);
   const closed = status === "completado" || status === "renovado";
 
@@ -88,10 +95,10 @@ function AppointmentRow({
   }[status];
 
   return (
-    <div className={cn("relative flex flex-col lg:flex-row lg:items-center gap-4 p-4 sm:px-5 hover:bg-surface-2/50 transition", closed && "opacity-70")}>
+    <div className={cn("relative flex flex-col gap-4 p-4 sm:px-5 hover:bg-surface-2/50 transition", !compact && "lg:flex-row lg:items-center", closed && "opacity-70")}>
       <span className={cn("absolute left-0 top-4 bottom-4 w-1 rounded-r-full", accent)} />
 
-      <div className="flex items-center gap-3 min-w-0 lg:w-[30%]">
+      <div className={cn("flex items-center gap-3 min-w-0", !compact && "lg:w-[30%]")}>
         <div className="grid place-items-center size-10 shrink-0 rounded-full bg-surface-2 text-sm font-semibold">
           {initials(a.client?.name ?? "?")}
         </div>
@@ -104,7 +111,7 @@ function AppointmentRow({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm lg:flex-1">
+      <div className={cn("flex flex-wrap items-center gap-x-5 gap-y-2 text-sm", !compact && "lg:flex-1")}>
         <div>
           <p className="text-xs text-muted">Próximo cambio</p>
           <p className="font-medium">
@@ -140,7 +147,7 @@ function AppointmentRow({
         <StatusBadge status={status} />
       </div>
 
-      <div className="flex items-center gap-2 lg:justify-end">
+      <div className={cn("flex flex-wrap items-center gap-2", !compact && "lg:justify-end lg:flex-nowrap")}>
         {confirmDelete ? (
           <div className="flex items-center gap-2 rounded-xl bg-red-500/10 px-3 py-1.5 animate-fade-in">
             <span className="text-sm font-medium text-red-700 dark:text-red-400">¿Eliminar?</span>
@@ -186,6 +193,9 @@ function AppointmentRow({
                   <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-xl animate-fade-in">
                     <MenuItem icon={Pencil} onClick={() => (setMenu(false), onEdit())}>
                       Editar
+                    </MenuItem>
+                    <MenuItem icon={Printer} onClick={() => (setMenu(false), router.push(`/dashboard/etiquetas?agenda=${a.id}`))}>
+                      Imprimir etiqueta
                     </MenuItem>
                     {!closed && (
                       <MenuItem icon={Check} onClick={() => setStatus("completado", "Marcada como completada")}>
