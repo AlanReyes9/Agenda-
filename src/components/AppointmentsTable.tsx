@@ -166,6 +166,9 @@ function AppointmentRow({
         ) : (
           <>
             {!closed && <WhatsAppButton appointment={a} settings={settings} />}
+            <Button size="sm" variant="secondary" onClick={() => router.push(`/dashboard/etiquetas?agenda=${a.id}`)} title="Crear etiqueta con los datos de esta agenda">
+              <Printer className="size-3.5" /> Etiqueta
+            </Button>
             {!closed ? (
               <>
                 <Button size="sm" variant="secondary" onClick={onRenew} title="Renovar">
@@ -198,9 +201,6 @@ function AppointmentRow({
                   <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-xl animate-fade-in">
                     <MenuItem icon={Pencil} onClick={() => (setMenu(false), onEdit())}>
                       Editar
-                    </MenuItem>
-                    <MenuItem icon={Printer} onClick={() => (setMenu(false), router.push(`/dashboard/etiquetas?agenda=${a.id}`))}>
-                      Imprimir etiqueta
                     </MenuItem>
                     {!closed && (
                       <MenuItem icon={Check} onClick={() => setStatus("completado", "Marcada como completada")}>

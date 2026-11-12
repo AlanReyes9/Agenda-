@@ -95,6 +95,9 @@ function EtiquetasContent() {
   const { data: settings, setData: setSettings } = useSettings();
   const [me, setMe] = useState<AppUser | null>(null);
   const [tab, setTab] = useState<"datos" | "diseno">("datos");
+  // Al venir desde una agenda: todo se llena solo, el cursor queda en «Aceite»
+  const fromAgenda = Boolean(params.get("agenda"));
+  const oilRef = useRef<HTMLInputElement>(null);
   const [agendaId, setAgendaId] = useState<string>(params.get("agenda") ?? "");
   const [printer, setPrinter] = useState<PrinterConfig>(DEFAULT_PRINTER);
   const [busy, setBusy] = useState(false);
@@ -163,7 +166,15 @@ function EtiquetasContent() {
       oil: a.oil_type ?? "",
       notes: a.notes ?? "",
     });
-  }, [agendaId, appointments]);
+    // Listo para escribir el aceite (si ya trae uno, queda seleccionado para reemplazarlo)
+    if (fromAgenda) {
+      requestAnimationFrame(() => {
+        oilRef.current?.focus();
+        oilRef.current?.select();
+        oilRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
+  }, [agendaId, appointments, fromAgenda]);
 
   const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement>) => setFields((f) => ({ ...f, [k]: e.target.value }));
 
@@ -251,7 +262,7 @@ function EtiquetasContent() {
     <>
       <PageHeader
         title="Etiquetas"
-        description={`${(design.widthMm / 25.4).toFixed(1)}″ × ${(design.heightMm / 25.4).toFixed(1)}″ · Zebra LP 2844`}
+        description={`${(design.widthMm / 25.4).toFixed(2)}″ × ${(design.heightMm / 25.4).toFixed(2)}″ · Zebra LP 2844`}
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_minmax(0,600px)]">
@@ -301,8 +312,20 @@ function EtiquetasContent() {
                 <Field label="Placa">
                   <Input value={fields.plate} onChange={set("plate")} className="uppercase" />
                 </Field>
-                <Field label="Aceite">
-                  <Input value={fields.oil} onChange={set("oil")} placeholder="CEPSA 5W-20" />
+                <Field label="Aceite" hint={fromAgenda ? "Escribe el aceite y pulsa Enter para imprimir." : undefined}>
+                  <Input
+                    ref={oilRef}
+                    value={fields.oil}
+                    onChange={set("oil")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        printLabelsInBrowser(spec, printCfg);
+                      }
+                    }}
+                    placeholder="CEPSA 5W-20"
+                    className={cn(fromAgenda && "border-brand-500 ring-4 ring-brand-500/15")}
+                  />
                 </Field>
                 <Field label="Fecha del servicio">
                   <Input type="date" value={fields.serviceDate} onChange={set("serviceDate")} />
@@ -377,7 +400,7 @@ function EtiquetasContent() {
               </Button>
             </div>
             <p className="text-xs text-muted">
-              En la ventana de impresión: impresora <b className="text-fg">ZDesigner LP 2844</b>, tamaño de papel <b className="text-fg">2.50 × 1.40 in</b>, márgenes <b className="text-fg">Ninguno</b> y escala <b className="text-fg">100%</b>.
+              En la ventana de impresión: impresora <b className="text-fg">ZDesigner LP 2844</b>, tamaño de papel <b className="text-fg">{(Math.floor((design.widthMm / 25.4) * 100 + 1e-6) / 100).toFixed(2)} × {(Math.floor((design.heightMm / 25.4) * 100 + 1e-6) / 100).toFixed(2)} in</b>, márgenes <b className="text-fg">Ninguno</b> y escala <b className="text-fg">100%</b>.
             </p>
 
             <Calibration printer={printer} onChange={updatePrinter} />
