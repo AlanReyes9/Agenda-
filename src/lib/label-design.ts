@@ -62,7 +62,7 @@ const row = (text: string, size: LineSize, bold = false, align: "left" | "center
 const rule = (): DesignRow => ({ id: newRowId(), kind: "rule", text: "", size: "sm", bold: false, align: "center" });
 const space = (): DesignRow => ({ id: newRowId(), kind: "space", text: "", size: "md", bold: false, align: "center" });
 
-export const DEFAULT_SIZE = { widthMm: 63.5, heightMm: 35.6 };
+export const DEFAULT_SIZE = { widthMm: 63.5, heightMm: 31.8 }; // 2.50″ × 1.25″ (sticker real medido)
 
 export const DESIGN_PRESETS: { id: string; name: string; build: () => LabelDesign }[] = [
   {

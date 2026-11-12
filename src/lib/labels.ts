@@ -53,7 +53,7 @@ export const LABEL_FONT = "Tahoma, Verdana, 'DejaVu Sans', Arial, Helvetica, san
 
 export const DEFAULT_PRINTER: PrinterConfig = {
   widthMm: 63.5,
-  heightMm: 35.6,
+  heightMm: 31.8,
   dpi: 203,
   gapMm: 2,
   copies: 1,
