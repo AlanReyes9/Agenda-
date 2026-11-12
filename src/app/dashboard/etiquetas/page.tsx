@@ -187,7 +187,7 @@ function EtiquetasContent() {
   );
 
   const spec: LabelSpec = useMemo(
-    () => ({ widthMm: design.widthMm, heightMm: design.heightMm, lines: renderDesign(design, values), qr: null }),
+    () => ({ widthMm: design.widthMm, heightMm: design.heightMm, lines: renderDesign(design, values) }),
     [design, values],
   );
   const previewHtml = useMemo(() => labelInnerHtml(layoutLabel(spec)), [spec]);

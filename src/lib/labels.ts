@@ -1,7 +1,5 @@
 "use client";
 
-import QRCode from "qrcode";
-
 /* ------------------------------------------------------------------ */
 /* Modelo                                                              */
 /* ------------------------------------------------------------------ */
@@ -17,7 +15,6 @@ export interface LabelSpec {
   widthMm: number;
   heightMm: number;
   lines: LabelLine[];
-  qr?: string | null;
 }
 
 export interface PrinterConfig {
@@ -28,7 +25,6 @@ export interface PrinterConfig {
   copies: number;
   /** Algunas impresoras TSPL interpretan los bits al revés. */
   invertTspl: boolean;
-  showQr: boolean;
   /** Lenguaje para «Zebra directo»: EPL (LP 2844, TLP 2844) o ZPL (modelos -Z, ZD, GK…). */
   zebraLang: "epl" | "zpl";
 }
@@ -54,7 +50,6 @@ export const DEFAULT_PRINTER: PrinterConfig = {
   gapMm: 2,
   copies: 1,
   invertTspl: false,
-  showQr: false,
   zebraLang: "epl",
 };
 
@@ -83,26 +78,7 @@ export interface PlacedRule {
   w: number;
   t: number;
 }
-export interface PlacedQr {
-  kind: "qr";
-  x: number;
-  y: number;
-  size: number;
-  modules: boolean[][];
-}
-export type Placed = PlacedText | PlacedRule | PlacedQr;
-
-function qrModules(data: string): boolean[][] {
-  const qr = QRCode.create(data, { errorCorrectionLevel: "M" });
-  const n = qr.modules.size;
-  const rows: boolean[][] = [];
-  for (let r = 0; r < n; r++) {
-    const row: boolean[] = [];
-    for (let c = 0; c < n; c++) row.push(Boolean(qr.modules.get(r, c)));
-    rows.push(row);
-  }
-  return rows;
-}
+export type Placed = PlacedText | PlacedRule;
 
 /** Ancho del texto (en unidades de alto de fuente), medido con la fuente real cuando hay navegador. */
 let measureCtx: CanvasRenderingContext2D | null | undefined;
@@ -123,25 +99,10 @@ export function layoutLabel(spec: LabelSpec): Placed[] {
   const { widthMm: W, heightMm: H } = spec;
   const m = Math.min(4, Math.max(1.5, Math.min(W, H) * 0.06));
   const out: Placed[] = [];
-  let textX = m;
-  let textW = W - 2 * m;
-  let textTop = m;
-  let textBottom = H - m;
-
-  if (spec.qr) {
-    const modules = qrModules(spec.qr);
-    if (W >= H * 1.3) {
-      // Apaisada: QR a la derecha
-      const size = Math.min(H - 2 * m, W * 0.32);
-      out.push({ kind: "qr", x: W - m - size, y: (H - size) / 2, size, modules });
-      textW = W - 3 * m - size;
-    } else {
-      // Cuadrada o vertical: QR abajo, centrado
-      const size = Math.min(W * 0.34, H * 0.28);
-      out.push({ kind: "qr", x: (W - size) / 2, y: H - m - size, size, modules });
-      textBottom = H - m - size - m * 0.6;
-    }
-  }
+  const textX = m;
+  const textW = W - 2 * m;
+  const textTop = m;
+  const textBottom = H - m;
 
   const lines = spec.lines.filter((l) => l.kind !== "text" || l.text.trim());
   const units = lines.reduce(
@@ -215,17 +176,9 @@ function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
 
-function qrSvg(q: PlacedQr): string {
-  const n = q.modules.length;
-  let path = "";
-  q.modules.forEach((row, r) => row.forEach((on, c) => on && (path += `M${c} ${r}h1v1h-1z`)));
-  return `<svg style="position:absolute;left:${q.x}mm;top:${q.y}mm;width:${q.size}mm;height:${q.size}mm" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><path d="${path}" fill="#000"/></svg>`;
-}
-
 export function labelInnerHtml(placed: Placed[]): string {
   return placed
     .map((p) => {
-      if (p.kind === "qr") return qrSvg(p);
       if (p.kind === "rule")
         return `<div style="position:absolute;left:${p.x}mm;top:${p.y}mm;width:${p.w}mm;height:${p.t}mm;background:#000"></div>`;
       return `<div style="position:absolute;left:${p.x}mm;top:${p.y}mm;width:${p.w}mm;font-size:${p.h}mm;line-height:1;font-weight:${p.bold ? 700 : 500};text-align:${p.align};white-space:nowrap;overflow:hidden;letter-spacing:-0.01em">${esc(p.text)}</div>`;
@@ -277,12 +230,6 @@ export function renderToCanvas(spec: LabelSpec, dpi: number): HTMLCanvasElement 
   for (const p of layoutLabel(spec)) {
     if (p.kind === "rule") {
       ctx.fillRect(Math.round(p.x * dpmm), Math.round(p.y * dpmm), Math.round(p.w * dpmm), Math.max(1, Math.round(p.t * dpmm)));
-    } else if (p.kind === "qr") {
-      const n = p.modules.length;
-      const cell = Math.max(1, Math.floor((p.size * dpmm) / n));
-      const ox = Math.round(p.x * dpmm + (p.size * dpmm - cell * n) / 2);
-      const oy = Math.round(p.y * dpmm + (p.size * dpmm - cell * n) / 2);
-      p.modules.forEach((row, r) => row.forEach((on, c) => on && ctx.fillRect(ox + c * cell, oy + r * cell, cell, cell)));
     } else {
       let px = p.h * dpmm;
       const maxW = p.w * dpmm;
@@ -372,32 +319,6 @@ export function buildTspl(spec: LabelSpec, cfg: PrinterConfig): Uint8Array {
 /* ZPL (Zebra)                                                          */
 /* ------------------------------------------------------------------ */
 
-function hex(bytes: Uint8Array) {
-  let s = "";
-  for (const b of bytes) s += b.toString(16).padStart(2, "0").toUpperCase();
-  return s;
-}
-
-function zplQr(p: PlacedQr, dpmm: number): string {
-  const n = p.modules.length;
-  const cell = Math.max(1, Math.floor((p.size * dpmm) / n));
-  const px = cell * n;
-  const bytesPerRow = Math.ceil(px / 8);
-  const bits = new Uint8Array(bytesPerRow * px);
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++) {
-      if (!p.modules[r][c]) continue;
-      for (let dy = 0; dy < cell; dy++)
-        for (let dx = 0; dx < cell; dx++) {
-          const x = c * cell + dx;
-          const y = r * cell + dy;
-          bits[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
-        }
-    }
-  const ox = Math.round(p.x * dpmm + (p.size * dpmm - px) / 2);
-  const oy = Math.round(p.y * dpmm + (p.size * dpmm - px) / 2);
-  return `^FO${ox},${oy}^GFA,${bits.length},${bits.length},${bytesPerRow},${hex(bits)}^FS`;
-}
 
 export function buildZpl(spec: LabelSpec, cfg: PrinterConfig): string {
   const dpmm = cfg.dpi / 25.4;
@@ -406,7 +327,6 @@ export function buildZpl(spec: LabelSpec, cfg: PrinterConfig): string {
   const parts = ["^XA", "^CI28", `^PW${d(spec.widthMm)}`, `^LL${d(spec.heightMm)}`, "^LH0,0"];
   for (const p of layoutLabel(spec)) {
     if (p.kind === "rule") parts.push(`^FO${d(p.x)},${d(p.y)}^GB${d(p.w)},${Math.max(1, d(p.t))},${Math.max(1, d(p.t))}^FS`);
-    else if (p.kind === "qr") parts.push(zplQr(p, dpmm));
     else {
       const h = Math.max(10, d(p.h * 1.12)); // la fuente 0 es algo más baja que Arial
       parts.push(`^FO${d(p.x)},${d(p.y)}^A0N,${h},${Math.round(h * (p.bold ? 0.95 : 0.85))}^FB${d(p.w)},1,0,${p.align === "center" ? "C" : "L"},0^FD${clean(p.text)}^FS`);
