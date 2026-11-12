@@ -61,6 +61,7 @@ export interface Settings {
   workshop_name: string;
   workshop_phone: string | null;
   workshop_address: string | null;
+  label_design: import("./label-design").LabelDesign | null;
   whatsapp_template: string;
   reminder_days: number;
   google_client_id: string | null;

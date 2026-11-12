@@ -3,6 +3,7 @@ import { errorMessage, jsonError, readJson, requireStaff } from "@/lib/api";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Settings } from "@/lib/types";
+import { sanitizeDesign } from "@/lib/label-design";
 
 async function loadSettings(supabase: SupabaseClient): Promise<Settings> {
   const { data, error } = await supabase.from("settings").select("*").eq("id", 1).maybeSingle();
@@ -22,6 +23,7 @@ async function loadSettings(supabase: SupabaseClient): Promise<Settings> {
     workshop_name: data?.workshop_name ?? "Auto Soluciones Daniel",
     workshop_phone: data?.workshop_phone ?? null,
     workshop_address: data?.workshop_address ?? null,
+    label_design: sanitizeDesign(data?.label_design),
     whatsapp_template: data?.whatsapp_template ?? "",
     reminder_days: data?.reminder_days ?? 7,
     google_client_id: data?.google_client_id ?? null,
@@ -66,6 +68,14 @@ export async function PATCH(request: Request) {
     update.whatsapp_template = v;
   }
   if (b.google_calendar_id !== undefined) update.google_calendar_id = String(b.google_calendar_id || "").trim() || "primary";
+  if (b.label_design !== undefined) {
+    if (b.label_design === null) update.label_design = null;
+    else {
+      const design = sanitizeDesign(b.label_design);
+      if (!design) return jsonError("Diseño de etiqueta no válido");
+      update.label_design = design;
+    }
+  }
   if (b.reminder_days !== undefined) {
     const n = Number(b.reminder_days);
     if (!Number.isInteger(n) || n < 0 || n > 60) return jsonError("Días de aviso: entre 0 y 60");
