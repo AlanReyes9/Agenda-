@@ -233,12 +233,14 @@ export function printLabelsInBrowser(spec: LabelSpec, cfg: PrinterConfig) {
   const img = `<img src="${src}" style="display:block;width:${spec.widthMm}mm;height:${spec.heightMm}mm;image-rendering:pixelated;image-rendering:crisp-edges">`;
   const pages = Array.from({ length: Math.max(1, cfg.copies) }, () => `<div class="label">${img}</div>`).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta</title><style>
-    @page { size: ${spec.widthMm}mm ${spec.heightMm}mm; margin: 0; }
+    @page { size: ${spec.widthMm}mm ${(spec.heightMm - 1).toFixed(2)}mm; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    html, body { background: #fff; }
-    .label { width: ${spec.widthMm}mm; height: ${spec.heightMm}mm; overflow: hidden; page-break-after: always; break-after: page; }
+    html, body { background: #fff; overflow: hidden; }
+    /* 1 mm menos que la página: evita que el redondeo del driver (35.6 mm → 1.40″)
+       genere una segunda página en blanco (sticker vacío). */
+    .label { width: ${spec.widthMm}mm; height: ${(spec.heightMm - 1).toFixed(2)}mm; overflow: hidden; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
     .label:last-child { page-break-after: auto; break-after: auto; }
-  </style></head><body>${pages}</body></html>`;
+  </style></head><body>${pages}</body></html>`.replace(/>\s+</g, "><");
 
   const iframe = document.createElement("iframe");
   iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
