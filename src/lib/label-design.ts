@@ -66,28 +66,8 @@ export const DEFAULT_SIZE = { widthMm: 63.5, heightMm: 35.6 };
 
 export const DESIGN_PRESETS: { id: string; name: string; build: () => LabelDesign }[] = [
   {
-    id: "ticket",
-    name: "Ticket de servicio",
-    build: () => ({
-      ...DEFAULT_SIZE,
-      rows: [
-        row("{taller}", "lg", true),
-        row("Tel/WhatsApp {telefono}", "xs"),
-        rule(),
-        row("TICKET DE SERVICIO", "sm", true),
-        row("{cliente} · {vehiculo}", "sm", true, "left"),
-        row("Placa {placa} · {millaje} mi", "sm", false, "left"),
-        row("Fecha {fecha} · Aceite {aceite}", "sm", false, "left"),
-        row("Notas: {notas}", "sm", false, "left"),
-        rule(),
-        row("Próximo cambio: {proximo} · o {proximo_millaje} mi", "xs", true),
-        row("¡Gracias por su preferencia!", "xs"),
-      ],
-    }),
-  },
-  {
     id: "zdesigner",
-    name: "Sticker (formato ZDesigner)",
+    name: "Sticker formato Zebra",
     build: () => ({
       ...DEFAULT_SIZE,
       uppercase: true,

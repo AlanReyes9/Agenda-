@@ -44,7 +44,6 @@ import {
 } from "@/lib/labels";
 import {
   defaultDesign,
-  DESIGN_PRESETS,
   DESIGN_VARIABLES,
   newRowId,
   renderDesign,
@@ -488,20 +487,17 @@ function DesignEditor({
 
   return (
     <Card className="p-5 space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted mr-1">Empezar desde</span>
-        {DESIGN_PRESETS.map((p) => (
-          <Button
-            key={p.id}
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              if (window.confirm(`¿Reemplazar el diseño actual por «${p.name}»?`)) onChange({ ...p.build(), widthMm: design.widthMm, heightMm: design.heightMm });
-            }}
-          >
-            {p.name}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted">Sticker formato Zebra · edita los renglones como quieras.</p>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            if (window.confirm("¿Volver al sticker formato Zebra original? Se perderán los cambios del diseño.")) onChange(defaultDesign());
+          }}
+        >
+          <RotateCcw className="size-3.5" /> Diseño original
+        </Button>
       </div>
 
       <label className="flex items-center gap-2 text-sm cursor-pointer">
